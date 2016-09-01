@@ -1,6 +1,6 @@
 /* global gFacts:true, bot:true, Promise */
 
-var script = require("../index");
+var SuperScript = require("../index");
 var sfact = require("sfacts");
 var fs = require("fs");
 var rmdir = require("rmdir");
@@ -23,6 +23,19 @@ botData = [
   './test/fixtures/concepts/botfacts.tbl',
   './test/fixtures/concepts/botown.tbl'
 ];
+
+
+const startTimer = name => {
+  const start = process.hrtime()
+  // return it wrapped in an object so that at the use site it reads like timer.stop()
+  return {
+    stop:() => {
+      const end = process.hrtime(start)
+      console.log('%s time (hr): %ds %dms', name, end[0], end[1] / 1000000)
+    }
+  }
+}
+exports.startTimer = startTimer
 
 exports.bootstrap = bootstrap = function(cb) {
   sfact.load(data, 'factsystem', function(err, facts){
@@ -103,6 +116,7 @@ exports.before = function(file) {
   };
 
   return function(done) {
+    const timer = startTimer('startup')
     var fileCache = './test/fixtures/cache/'+ file +'.json';
     fs.exists(fileCache, function (exists) {
 
@@ -116,8 +130,9 @@ exports.before = function(file) {
             fs.writeFile(fileCache, JSON.stringify(result), function (err) {
               // Load the topic file into the MongoDB
               importFilePath(fileCache, facts, function() {
-                new script(options, function(err, botx) {
+                new SuperScript(options, function(err, botx) {
                   bot = botx;
+                  timer.stop()
                   done();
                 });
               });
@@ -145,8 +160,9 @@ exports.before = function(file) {
                 // options.botfacts = botfacts;
                 bot = null;
                 importFilePath(fileCache, facts, function() {
-                  new script(options, function(err, botx) {
+                  new SuperScript(options, function(err, botx) {
                     bot = botx;
+                    timer.stop()
                     done();
                   }); // new bot
                 }); // import file
